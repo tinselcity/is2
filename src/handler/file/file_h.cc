@@ -10,9 +10,10 @@
 //! ----------------------------------------------------------------------------
 //! includes
 //! ----------------------------------------------------------------------------
+// ---------------------------------------------------------
+// ext is2 includes
+// ---------------------------------------------------------
 #include "is2/support/os.h"
-#include "srvr/t_srvr.h"
-#include "handler/file/mime_types.h"
 #include "is2/support/string_util.h"
 #include "is2/support/ndebug.h"
 #include "is2/support/nbq.h"
@@ -22,6 +23,14 @@
 #include "is2/srvr/rqst.h"
 #include "is2/srvr/session.h"
 #include "is2/srvr/api_resp.h"
+// ---------------------------------------------------------
+// internal is2 includes
+// ---------------------------------------------------------
+#include "srvr/t_srvr.h"
+#include "handler/file/mime_types.h"
+// ---------------------------------------------------------
+// system includes
+// ---------------------------------------------------------
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -158,9 +167,9 @@ h_resp_t file_h::get_file(session &a_session,
         }
         a_session.m_u = l_fs;
         nbq &l_q = *(a_session.m_out_q);
-        // ---------------------------------------
+        // -------------------------------------------------
         // Write headers
-        // ---------------------------------------
+        // -------------------------------------------------
         nbq_write_status(l_q, HTTP_STATUS_OK);
         nbq_write_header(l_q, "Server", a_session.m_t_srvr.get_server_name().c_str());
         nbq_write_header(l_q, "Date", get_date_str());
@@ -260,10 +269,10 @@ file_u::~file_u()
 //! ----------------------------------------------------------------------------
 int32_t file_u::fsinit(const char *a_filename)
 {
-        // ---------------------------------------
+        // -------------------------------------------------
         // Check is a file
         // TODO
-        // ---------------------------------------
+        // -------------------------------------------------
         int32_t l_s = STATUS_OK;
         // Open the file
         //NDBG_PRINT("a_filename: %s\n", a_filename);
@@ -373,7 +382,8 @@ ssize_t file_u::ups_read_ahead(size_t a_len)
         }
         m_read += l_read;
         //NDBG_PRINT("READ: B %9ld / %9lu / %9lu\n", l_len_read, m_read, m_size);
-        if ((((size_t)l_read) < a_len) || (m_read >= m_size))
+        if ((((size_t)l_read) < a_len) ||
+            (m_read >= m_size))
         {
                 // All done; close the file.
                 close(m_fd);

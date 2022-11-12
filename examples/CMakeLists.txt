@@ -12,7 +12,7 @@ include_directories(
 # tls support
 # ------------------------------------------------------------------------------
 if(BUILD_TLS)
-    set(LIBRARIES is2 crypto ssl pthread)
+    set(LIBRARIES is2 crypto ssl pthread tcmalloc profiler)
 else()
     set(LIBRARIES is2 pthread)
 endif()
@@ -30,6 +30,13 @@ ADD_EXECUTABLE(files_cmd files.cc)
 ADD_DEPENDENCIES(files_cmd is2)
 SET_TARGET_PROPERTIES(files_cmd PROPERTIES OUTPUT_NAME "files")
 TARGET_LINK_LIBRARIES(files_cmd ${DEBUG_LIBRARIES} ${LIBRARIES})
+# ------------------------------------------------------------------------------
+# http_files
+# ------------------------------------------------------------------------------
+ADD_EXECUTABLE(http_files_cmd http_files.cc)
+ADD_DEPENDENCIES(http_files_cmd is2)
+SET_TARGET_PROPERTIES(http_files_cmd PROPERTIES OUTPUT_NAME "http_files")
+TARGET_LINK_LIBRARIES(http_files_cmd ${DEBUG_LIBRARIES} ${LIBRARIES})
 # ------------------------------------------------------------------------------
 # https_files
 # ------------------------------------------------------------------------------
