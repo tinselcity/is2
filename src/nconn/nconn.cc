@@ -112,13 +112,93 @@ int32_t nconn::nc_write(nbq *a_out_q, uint32_t &ao_written)
                 TRC_ERROR("a_out_q == NULL\n");
                 return NC_STATUS_ERROR;
         }
+        // -------------------------------------------------
+        // while read available loop until OK:
+        //   return if AGAIN or ERROR
+        // if not sendfd:
+        //  return OK
+        // while sendfd != EOF
+        //    return if AGAIN or ERROR
+        // -------------------------------------------------
+#if 1
+        // -------------------------------------------------
+        // write while read available
+        // -------------------------------------------------
+        int32_t l_s = 1;
+        while ((l_s > 0) &&
+               a_out_q->read_avail())
+        {
+                // -----------------------------------------
+                // write until AGAIN/ERROR
+                // -----------------------------------------
+                l_s = ncwrite(a_out_q->b_read_ptr(), a_out_q->b_read_avail());
+                if (l_s < 0)
+                {
+                        switch(l_s)
+                        {
+                        case NC_STATUS_AGAIN:
+                        {
+                                return l_s;
+                        }
+                        default:
+                        {
+                                return NC_STATUS_ERROR;
+                        }
+                        }
+                        //???
+                        return l_s;
+                }
+                ao_written += l_s;
+                // and not error?
+                a_out_q->b_read_incr(l_s);
+                a_out_q->shrink();
+        }
+        // -------------------------------------------------
+        // if no read_avail but file fd try send
+        // -------------------------------------------------
+        if (!a_out_q->read_avail() &&
+            (m_sendfile_fd != -1))
+        {
+                // -----------------------------------------
+                // write until AGAIN/ERROR
+                // -----------------------------------------
+                l_s = 1;
+                while (l_s > 0)
+                {
+                        l_s = ncsendfile();
+                        if (l_s < 0)
+                        {
+                                switch(l_s)
+                                {
+                                case NC_STATUS_AGAIN:
+                                {
+                                        return l_s;
+                                }
+                                default:
+                                {
+                                        return NC_STATUS_ERROR;
+                                }
+                                }
+                                //???
+                                return l_s;
+                        }
+                        ao_written += l_s;
+                }
+        }
+#endif
+        // -------------------------------------------------
+        // *************************************************
+        // OLD LOGIC
+        // *************************************************
+        // -------------------------------------------------
+#if 0
         if (!a_out_q->read_avail())
         {
                 return NC_STATUS_OK;
         }
         // -------------------------------------------------
         // while connection is writeable...
-        //   wrtie up to next write size
+        //   write up to next write size
         //   if size write == write_q free size
         //     add
         // -------------------------------------------------
@@ -149,6 +229,7 @@ int32_t nconn::nc_write(nbq *a_out_q, uint32_t &ao_written)
         // and not error?
         a_out_q->b_read_incr(l_s);
         a_out_q->shrink();
+#endif
         return NC_STATUS_OK;
 }
 //! ----------------------------------------------------------------------------
@@ -274,6 +355,8 @@ nconn::nconn(void):
       m_num_reqs(0),
       m_remote_sa(),
       m_remote_sa_len(0),
+      m_sendfile_fd(-1),
+      m_sendfile_size(DEFAULT_SENDFILE_SIZE),
       m_nc_state(NC_STATE_FREE),
       m_id(0),
       m_idx(0),

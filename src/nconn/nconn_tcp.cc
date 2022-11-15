@@ -31,6 +31,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/ioctl.h>
+#include <sys/sendfile.h>
 // From wine msg groups
 // https://www.winehq.org/pipermail/wine-cvs/2007-March/030712.html
 #ifdef __MACH__
@@ -384,6 +385,61 @@ int32_t nconn_tcp::ncwrite(char *a_buf, uint32_t a_buf_len)
         NCONN_ERROR(CONN_STATUS_ERROR_INTERNAL,
                     "LABEL[%s]: Error: performing write.  Reason: %s.\n",
                     m_label.c_str(), ::strerror(errno));
+        return NC_STATUS_ERROR;
+}
+//! ----------------------------------------------------------------------------
+//! \details: TODO
+//! \return:  TODO
+//! \param:   TODO
+//! ----------------------------------------------------------------------------
+int32_t nconn_tcp::ncsendfile(void)
+{
+        int32_t l_s;
+        errno = 0;
+        l_s = sendfile(m_fd, m_sendfile_fd, nullptr, m_sendfile_size);
+        // -------------------------------------------------
+        // write >= 0 bytes successfully
+        // -------------------------------------------------
+        if (l_s >= 0)
+        {
+                if (l_s == 0)
+                {
+                        m_sendfile_fd = -1;
+                }
+                return l_s;
+        }
+        // -------------------------------------------------
+        // EAGAIN
+        // -------------------------------------------------
+        if (errno == EAGAIN)
+        {
+                // Add to writeable
+                if (m_evr_loop)
+                {
+                        l_s = m_evr_loop->mod_fd(m_fd,
+                                        EVR_FILE_ATTR_MASK_WRITE|
+                                        EVR_FILE_ATTR_MASK_STATUS_ERROR |
+                                        EVR_FILE_ATTR_MASK_RD_HUP |
+                                        EVR_FILE_ATTR_MASK_HUP |
+                                        EVR_FILE_ATTR_MASK_ET,
+                                        &m_evr_fd);
+                        if (l_s != STATUS_OK)
+                        {
+                                NCONN_ERROR(CONN_STATUS_ERROR_INTERNAL,
+                                            "LABEL[%s]: Error: Couldn't add socket file descriptor\n",
+                                            m_label.c_str());
+                                return NC_STATUS_ERROR;
+                        }
+                }
+                return NC_STATUS_AGAIN;
+        }
+        // -------------------------------------------------
+        // unknown error
+        // -------------------------------------------------
+        NCONN_ERROR(CONN_STATUS_ERROR_INTERNAL,
+                    "LABEL[%s]: Error: performing write.  Reason: %s.\n",
+                    m_label.c_str(), ::strerror(errno));
+        return NC_STATUS_ERROR;
         return NC_STATUS_ERROR;
 }
 //! ----------------------------------------------------------------------------

@@ -73,6 +73,7 @@ void print_usage(FILE* a_stream, int a_exit_code)
         fprintf(a_stream, "  -p, --port          port (default: 12345)\n");
         fprintf(a_stream, "  -b, --block_size    set block size for contiguous send/recv sizes\n");
         fprintf(a_stream, "  -r, --root          root directory (default: './')\n");
+        fprintf(a_stream, "  -s, --sendfile      enable sendfile\n");
 #ifdef ENABLE_PROFILER
         fprintf(a_stream, "Debug Options:\n");
         fprintf(a_stream, "  -G, --gprofile       Google cpu profiler output file\n");
@@ -97,6 +98,7 @@ int main(int argc, char** argv)
         uint32_t l_block_size = 4096;
         std::string l_root;
         uint32_t l_threads = 0;
+        bool l_sendfile = false;
 #ifdef ENABLE_PROFILER
         std::string l_gprof_file;
         std::string l_hprof_file;
@@ -114,6 +116,7 @@ int main(int argc, char** argv)
                 { "port",         1, 0, 'p' },
                 { "block_size",   1, 0, 'b' },
                 { "root",         1, 0, 'r' },
+                { "sendfile",     0, 0, 's' },
 #ifdef ENABLE_PROFILER
                 { "gprofile",     1, 0, 'G' },
                 { "hprofile",     1, 0, 'H' },
@@ -126,9 +129,9 @@ int main(int argc, char** argv)
         // Args...
         // -------------------------------------------------
 #ifdef ENABLE_PROFILER
-        char l_short_arg_list[] = "hvp:b:r:G:H:";
+        char l_short_arg_list[] = "hvp:b:r:sG:H:";
 #else
-        char l_short_arg_list[] = "hvp:b:r:";
+        char l_short_arg_list[] = "hvp:b:r:s";
 #endif
         while ((l_opt = getopt_long_only(argc, argv, l_short_arg_list, l_long_options, &l_option_index)) != -1)
         {
@@ -169,15 +172,15 @@ int main(int argc, char** argv)
                 // -----------------------------------------
                 case 'p':
                 {
-                        int l_port_val;
-                        l_port_val = atoi(optarg);
-                        if ((l_port_val < 1) ||
-                           (l_port_val > 65535))
+                        int l_val;
+                        l_val = atoi(optarg);
+                        if ((l_val < 1) ||
+                           (l_val > 65535))
                         {
-                                printf("Error bad port value: %d.\n", l_port_val);
+                                printf("Error bad port value: %d.\n", l_val);
                                 print_usage(stdout, STATUS_ERROR);
                         }
-                        l_port = (uint16_t)l_port_val;
+                        l_port = (uint16_t)l_val;
                         break;
                 }
                 // -----------------------------------------
@@ -185,14 +188,14 @@ int main(int argc, char** argv)
                 // -----------------------------------------
                 case 'b':
                 {
-                        int l_port_val;
-                        l_port_val = atoi(optarg);
-                        if ((l_port_val < 1))
+                        int l_val;
+                        l_val = atoi(optarg);
+                        if ((l_val < 1))
                         {
-                                printf("Error bad block size value: %d.\n", l_port_val);
+                                printf("Error bad block size value: %d.\n", l_val);
                                 print_usage(stdout, STATUS_ERROR);
                         }
-                        l_block_size = (uint32_t)l_port_val;
+                        l_block_size = (uint32_t)l_val;
                         break;
                 }
                 // -----------------------------------------
@@ -201,6 +204,14 @@ int main(int argc, char** argv)
                 case 'r':
                 {
                         l_root = l_arg;
+                        break;
+                }
+                // -----------------------------------------
+                // sendfile
+                // -----------------------------------------
+                case 's':
+                {
+                        l_sendfile = true;
                         break;
                 }
 #ifdef ENABLE_PROFILER
@@ -259,6 +270,8 @@ int main(int argc, char** argv)
         {
                 l_file_h->set_root(l_root);
         }
+        l_file_h->set_sendfile(l_sendfile);
+        l_file_h->set_sendfile_size(l_block_size);
         l_lsnr->add_route("/*", l_file_h);
         ns_is2::srvr *l_srvr = new ns_is2::srvr();
         g_srvr = l_srvr;

@@ -790,7 +790,8 @@ state_top:
                         // ---------------------------------
                         if (l_cs &&
                            l_cs->m_out_q &&
-                           !l_cs->m_out_q->read_avail())
+                           !l_cs->m_out_q->read_avail() &&
+                           (l_nconn->m_sendfile_fd == -1))
                         {
                                 bool l_done = false;
                                 bool l_shutdown = false;

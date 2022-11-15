@@ -10,7 +10,7 @@
 #ifndef _NCONN_H
 #define _NCONN_H
 //! ----------------------------------------------------------------------------
-//! Includes
+//! includes
 //! ----------------------------------------------------------------------------
 #include "is2/status.h"
 #include "is2/nconn/scheme.h"
@@ -22,7 +22,11 @@
 #include <string.h>
 #include <string>
 //! ----------------------------------------------------------------------------
-//! Macros
+//! constants
+//! ----------------------------------------------------------------------------
+#define DEFAULT_SENDFILE_SIZE (64*1024)
+//! ----------------------------------------------------------------------------
+//! macros
 //! ----------------------------------------------------------------------------
 #define SET_NCONN_OPT(_conn, _opt, _buf, _len) do {\
                 int _status = 0;\
@@ -207,6 +211,7 @@ public:
         virtual int32_t ncsetup() = 0;
         virtual int32_t ncread(char *a_buf, uint32_t a_buf_len) = 0;
         virtual int32_t ncwrite(char *a_buf, uint32_t a_buf_len) = 0;
+        virtual int32_t ncsendfile(void) = 0;
         virtual int32_t ncaccept() = 0;
         virtual int32_t ncconnect() = 0;
         virtual int32_t nccleanup() = 0;
@@ -242,6 +247,8 @@ public:
         int64_t m_num_reqs;
         sockaddr_storage m_remote_sa;
         socklen_t m_remote_sa_len;
+        int m_sendfile_fd;
+        size_t m_sendfile_size;
 private:
         // -------------------------------------------------
         // private methods

@@ -37,27 +37,35 @@ public:
         // -------------------------------------------------
         file_h(void);
         ~file_h();
-        h_resp_t do_get(session &a_session, rqst &a_rqst, const url_pmap_t &a_url_pmap);
-        int32_t set_root(const std::string &a_root);
-        int32_t set_index(const std::string &a_index);
-        int32_t set_route(const std::string &a_route);
+        h_resp_t do_get(session& a_session, rqst& a_rqst, const url_pmap_t& a_url_pmap);
+        int32_t set_root(const std::string& a_root);
+        int32_t set_index(const std::string& a_index);
+        int32_t set_route(const std::string& a_route);
+        int32_t set_sendfile(bool a_flag);
+        int32_t set_sendfile_size(size_t a_size);
         // -------------------------------------------------
         // public static methods
         // -------------------------------------------------
-        static h_resp_t get_file(session &a_session, rqst &a_rqst, const std::string &a_path);
+        static h_resp_t get_file(session& a_session,
+                                 rqst& a_rqst,
+                                 const std::string& a_path,
+                                 bool a_sendfile,
+                                 size_t a_sendfile_size);
 private:
         // -------------------------------------------------
         // private methods
         // -------------------------------------------------
         // Disallow copy/assign
-        file_h& operator=(const file_h &);
-        file_h(const file_h &);
+        file_h& operator=(const file_h&);
+        file_h(const file_h&);
         // -------------------------------------------------
         // private members
         // -------------------------------------------------
         std::string m_root;
         std::string m_index;
         std::string m_route;
+        bool m_sendfile;
+        size_t m_sendfile_size;
 };
 //! ----------------------------------------------------------------------------
 //! Upstream Object
@@ -74,10 +82,12 @@ public:
         // -------------------------------------------------
         // public methods
         // -------------------------------------------------
-        file_u(session &a_session);
+        file_u(session& a_session);
         ~file_u();
-        int fsinit(const char *a_filename);
+        int fsinit(const char* a_filename);
         size_t fssize(void) { return m_size;}
+        int fd(void) { return m_fd; }
+        void set_sendfile(bool a_flag) { m_sendfile = a_flag; }
         // -------------------------------------------------
         // upstream methods
         // -------------------------------------------------
@@ -90,14 +100,15 @@ private:
         // private methods
         // -------------------------------------------------
         // Disallow copy/assign
-        file_u& operator=(const file_u &);
-        file_u(const file_u &);
+        file_u& operator=(const file_u&);
+        file_u(const file_u&);
         // -------------------------------------------------
         // private members
         // -------------------------------------------------
         int m_fd;
         size_t m_size;
         size_t m_read;
+        bool m_sendfile;
 };
 } //namespace ns_is2 {
 #endif

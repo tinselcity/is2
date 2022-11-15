@@ -1019,6 +1019,15 @@ int32_t nconn_tls::ncwrite(char *a_buf, uint32_t a_buf_len)
 //! \return:  TODO
 //! \param:   TODO
 //! ----------------------------------------------------------------------------
+int32_t nconn_tls::ncsendfile(void)
+{
+        return NC_STATUS_ERROR;
+}
+//! ----------------------------------------------------------------------------
+//! \details: TODO
+//! \return:  TODO
+//! \param:   TODO
+//! ----------------------------------------------------------------------------
 int32_t nconn_tls::ncsetup()
 {
         int32_t l_s;

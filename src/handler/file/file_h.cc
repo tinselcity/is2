@@ -23,6 +23,7 @@
 #include "is2/srvr/rqst.h"
 #include "is2/srvr/session.h"
 #include "is2/srvr/api_resp.h"
+#include "is2/nconn/nconn.h"
 // ---------------------------------------------------------
 // internal is2 includes
 // ---------------------------------------------------------
@@ -50,7 +51,9 @@ file_h::file_h(void):
         default_rqst_h(),
         m_root(),
         m_index("index.html"),
-        m_route()
+        m_route(),
+        m_sendfile(false),
+        m_sendfile_size(_FILE_MAX_READ_PER_BYTES)
 {
 }
 //! ----------------------------------------------------------------------------
@@ -104,7 +107,7 @@ h_resp_t file_h::do_get(session &a_session, rqst &a_rqst, const url_pmap_t &a_ur
         {
                 l_path = "." + l_path;
         }
-        return get_file(a_session, a_rqst, l_path);
+        return get_file(a_session, a_rqst, l_path, m_sendfile, m_sendfile_size);
 }
 //! ----------------------------------------------------------------------------
 //! \details: TODO
@@ -141,9 +144,31 @@ int32_t file_h::set_route(const std::string &a_route)
 //! \return:  TODO
 //! \param:   TODO
 //! ----------------------------------------------------------------------------
+int32_t file_h::set_sendfile(bool a_flag)
+{
+        m_sendfile = a_flag;
+        return STATUS_OK;
+}
+//! ----------------------------------------------------------------------------
+//! \details: TODO
+//! \return:  TODO
+//! \param:   TODO
+//! ----------------------------------------------------------------------------
+int32_t file_h::set_sendfile_size(size_t a_size)
+{
+        m_sendfile_size = a_size;
+        return STATUS_OK;
+}
+//! ----------------------------------------------------------------------------
+//! \details: TODO
+//! \return:  TODO
+//! \param:   TODO
+//! ----------------------------------------------------------------------------
 h_resp_t file_h::get_file(session &a_session,
                           rqst &a_rqst,
-                          const std::string &a_path)
+                          const std::string &a_path,
+                          bool a_sendfile,
+                          size_t a_sendfile_size)
 {
         if (!a_session.m_out_q)
         {
@@ -215,6 +240,26 @@ h_resp_t file_h::get_file(session &a_session,
                 return H_RESP_DONE;
         }
         // -------------------------------------------------
+        // set sendfile fd
+        // -------------------------------------------------
+        if (a_sendfile)
+        {
+                l_fs->set_sendfile(a_sendfile);
+                l_fs->set_ups_done();
+                a_session.m_nconn->m_sendfile_fd = l_fs->fd();
+                a_session.m_nconn->m_sendfile_size = a_sendfile_size;
+                // -------------------------------------------------
+                // queue output
+                // -------------------------------------------------
+                l_s = a_session.queue_output();
+                if (l_s != STATUS_OK)
+                {
+                        TRC_ERROR("performing queue_output\n");
+                        return H_RESP_SERVER_ERROR;
+                }
+                return H_RESP_DONE;
+        }
+        // -------------------------------------------------
         // Read up to 64k
         // -------------------------------------------------
         uint32_t l_read = _FILE_MAX_READ_PER_BYTES;
@@ -246,7 +291,8 @@ file_u::file_u(session &a_session):
         base_u(a_session),
         m_fd(-1),
         m_size(0),
-        m_read(0)
+        m_read(0),
+        m_sendfile(false)
 {
 }
 //! ----------------------------------------------------------------------------
@@ -360,6 +406,13 @@ ssize_t file_u::ups_read(size_t a_len)
 //! ----------------------------------------------------------------------------
 ssize_t file_u::ups_read_ahead(size_t a_len)
 {
+        // -------------------------------------------------
+        // skip if doing sendfile
+        // -------------------------------------------------
+        if (m_sendfile)
+        {
+                return 0;
+        }
         if (m_fd < 0)
         {
                 return 0;
@@ -370,7 +423,9 @@ ssize_t file_u::ups_read_ahead(size_t a_len)
                 TRC_ERROR("m_session->m_out_q == NULL\n");
                 return STATUS_ERROR;
         }
+        // -------------------------------------------------
         // Get one chunk of the file from disk
+        // -------------------------------------------------
         ssize_t l_read = 0;
         ssize_t l_last;
         size_t l_len_read = (a_len > (m_size - m_read))?(m_size - m_read): a_len;

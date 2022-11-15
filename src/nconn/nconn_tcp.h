@@ -76,6 +76,7 @@ public:
         int32_t ncsetup();
         int32_t ncread(char *a_buf, uint32_t a_buf_len);
         int32_t ncwrite(char *a_buf, uint32_t a_buf_len);
+        int32_t ncsendfile(void);
         int32_t ncaccept();
         int32_t ncconnect();
         int32_t nccleanup();
