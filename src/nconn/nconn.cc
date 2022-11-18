@@ -357,6 +357,7 @@ nconn::nconn(void):
       m_remote_sa_len(0),
       m_sendfile_fd(-1),
       m_sendfile_size(DEFAULT_SENDFILE_SIZE),
+      m_sendfile_offset(0),
       m_nc_state(NC_STATE_FREE),
       m_id(0),
       m_idx(0),

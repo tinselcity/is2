@@ -394,6 +394,10 @@ int32_t nconn_tcp::ncwrite(char *a_buf, uint32_t a_buf_len)
 //! ----------------------------------------------------------------------------
 int32_t nconn_tcp::ncsendfile(void)
 {
+        if (m_sendfile_fd < 0)
+        {
+                return 0;
+        }
         int32_t l_s;
         errno = 0;
         l_s = sendfile(m_fd, m_sendfile_fd, nullptr, m_sendfile_size);
@@ -439,7 +443,6 @@ int32_t nconn_tcp::ncsendfile(void)
         NCONN_ERROR(CONN_STATUS_ERROR_INTERNAL,
                     "LABEL[%s]: Error: performing write.  Reason: %s.\n",
                     m_label.c_str(), ::strerror(errno));
-        return NC_STATUS_ERROR;
         return NC_STATUS_ERROR;
 }
 //! ----------------------------------------------------------------------------

@@ -12,7 +12,18 @@ include_directories(
 # tls support
 # ------------------------------------------------------------------------------
 if(BUILD_TLS)
-    set(LIBRARIES is2 crypto ssl pthread tcmalloc profiler)
+  if(BUILD_CUSTOM_OPENSSL)
+    INCLUDE_DIRECTORIES("${BUILD_CUSTOM_OPENSSL}/include")
+  endif()
+  #set(LIBRARIES is2 crypto ssl pthread tcmalloc profiler)
+  set(LIBRARIES
+    is2
+    pthread
+    tcmalloc
+    profiler
+    /home/rmorrison/archive/openssl/libssl.a
+    /home/rmorrison/archive/openssl/libcrypto.a
+  )
 else()
     set(LIBRARIES is2 pthread)
 endif()

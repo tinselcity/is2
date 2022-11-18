@@ -247,6 +247,7 @@ h_resp_t file_h::get_file(session &a_session,
                 l_fs->set_sendfile(a_sendfile);
                 l_fs->set_ups_done();
                 a_session.m_nconn->m_sendfile_fd = l_fs->fd();
+                a_session.m_nconn->m_sendfile_offset = 0;
                 a_session.m_nconn->m_sendfile_size = a_sendfile_size;
                 // -------------------------------------------------
                 // queue output

@@ -16,6 +16,12 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#define ENABLE_PROFILER 1
+#ifdef ENABLE_PROFILER
+#include <gperftools/profiler.h>
+#include <gperftools/heap-profiler.h>
+#endif
 //! ----------------------------------------------------------------------------
 //! const
 //! ----------------------------------------------------------------------------
@@ -25,6 +31,22 @@
 #ifndef STATUS_ERROR
 #define STATUS_ERROR 0
 #endif
+//! ----------------------------------------------------------------------------
+//! globals
+//! ----------------------------------------------------------------------------
+ns_is2::srvr *g_srvr = NULL;
+//! ----------------------------------------------------------------------------
+//! \details: sigint signal handler
+//! \return:  TODO
+//! \param:   TODO
+//! ----------------------------------------------------------------------------
+void sig_handler(int signo)
+{
+        if (signo == SIGINT)
+        {
+                g_srvr->stop();
+        }
+}
 //! ----------------------------------------------------------------------------
 //! \details: Print the version.
 //! \return:  TODO
@@ -54,6 +76,14 @@ void print_usage(FILE* a_stream, int a_exit_code)
         fprintf(a_stream, "  -c, --cert          public certificate file\n");
         fprintf(a_stream, "  -b, --block_size    set block size for contiguous send/recv sizes\n");
         fprintf(a_stream, "  -r, --root          root directory (default: ./)\n");
+        fprintf(a_stream, "  -s, --sendfile      enable sendfile\n");
+#ifdef ENABLE_PROFILER
+        fprintf(a_stream, "\n");
+        fprintf(a_stream, "Debug Options:\n");
+        fprintf(a_stream, "  -G, --gprofile       Google cpu profiler output file\n");
+        fprintf(a_stream, "  -H, --hprofile       Google heap profiler output file\n");
+        fprintf(a_stream, "\n");
+#endif
         exit(a_exit_code);
 }
 //! ----------------------------------------------------------------------------
@@ -73,6 +103,11 @@ int main(int argc, char** argv)
         std::string l_cert;
         uint32_t l_block_size = 4096;
         std::string l_root;
+        bool l_sendfile = false;
+#ifdef ENABLE_PROFILER
+        std::string l_gprof_file;
+        std::string l_hprof_file;
+#endif
         // -------------------------------------------------
         // options
         // -------------------------------------------------
@@ -88,13 +123,22 @@ int main(int argc, char** argv)
                 { "cert",         1, 0, 'c' },
                 { "block_size",   1, 0, 'b' },
                 { "root",         1, 0, 'r' },
+                { "sendfile",     0, 0, 's' },
+#ifdef ENABLE_PROFILER
+                { "gprofile",     1, 0, 'G' },
+                { "hprofile",     1, 0, 'H' },
+#endif
                 // list sentinel
                 { 0, 0, 0, 0 }
         };
         // -------------------------------------------------
         // Args...
         // -------------------------------------------------
-        char l_short_arg_list[] = "hvp:k:c:b:r:";
+#ifdef ENABLE_PROFILER
+        char l_short_arg_list[] = "hvp:k:c:b:r:sG:H:";
+#else
+        char l_short_arg_list[] = "hvp:k:c:b:r:s";
+#endif
         while ((l_opt = getopt_long_only(argc, argv, l_short_arg_list, l_long_options, &l_option_index)) != -1)
         {
                 if (optarg)
@@ -185,6 +229,32 @@ int main(int argc, char** argv)
                         break;
                 }
                 // -----------------------------------------
+                // sendfile
+                // -----------------------------------------
+                case 's':
+                {
+                        l_sendfile = true;
+                        break;
+                }
+#ifdef ENABLE_PROFILER
+                // -----------------------------------------
+                // google cpu profiler output file
+                // -----------------------------------------
+                case 'G':
+                {
+                        l_gprof_file = optarg;
+                        break;
+                }
+                // -----------------------------------------
+                // google heap profiler output file
+                // -----------------------------------------
+                case 'H':
+                {
+                        l_hprof_file = optarg;
+                        break;
+                }
+#endif
+                // -----------------------------------------
                 // What???
                 // -----------------------------------------
                 case '?':
@@ -212,6 +282,19 @@ int main(int argc, char** argv)
                 }
         }
         // -------------------------------------------------
+        // profiling
+        // -------------------------------------------------
+#ifdef ENABLE_PROFILER
+        if (!l_gprof_file.empty())
+        {
+                ProfilerStart(l_gprof_file.c_str());
+        }
+        if (!l_hprof_file.empty())
+        {
+                HeapProfilerStart(l_hprof_file.c_str());
+        }
+#endif
+        // -------------------------------------------------
         // run server
         // -------------------------------------------------
         ns_is2::lsnr *l_lsnr = new ns_is2::lsnr(l_port, ns_is2::SCHEME_TLS);
@@ -220,16 +303,53 @@ int main(int argc, char** argv)
         {
                 l_file_h->set_root(l_root);
         }
+        l_file_h->set_sendfile(l_sendfile);
+        l_file_h->set_sendfile_size(l_block_size);
         l_lsnr->add_route("/*", l_file_h);
         ns_is2::srvr *l_srvr = new ns_is2::srvr();
+        g_srvr = l_srvr;
         l_srvr->set_tls_server_ctx_key(l_key);
         l_srvr->set_tls_server_ctx_crt(l_cert);
         l_srvr->set_block_size(l_block_size);
         l_srvr->register_lsnr(l_lsnr);
         l_srvr->set_num_threads(0);
+        // -------------------------------------------------
+        // Sigint handler
+        // -------------------------------------------------
+        if (signal(SIGINT, sig_handler) == SIG_ERR)
+        {
+                printf("Error: can't catch SIGINT\n");
+                return -1;
+        }
+        // -------------------------------------------------
+        // run...
+        // -------------------------------------------------
         l_srvr->run();
+        // -------------------------------------------------
+        // wait till done
+        // -------------------------------------------------
+        l_srvr->wait_till_stopped();
+        // -------------------------------------------------
+        // profiling
+        // -------------------------------------------------
+#ifdef ENABLE_PROFILER
+        if (!l_gprof_file.empty())
+        {
+                ProfilerStop();
+        }
+#endif
+#ifdef ENABLE_PROFILER
+        if (!l_hprof_file.empty())
+        {
+                HeapProfilerStop();
+        }
+#endif
+        // -------------------------------------------------
+        // cleanup
+        // -------------------------------------------------
         if (l_srvr) {delete l_srvr; l_srvr = NULL;}
         if (l_file_h) {delete l_file_h; l_file_h = NULL;}
         return 0;
+
 }
 

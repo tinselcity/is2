@@ -75,6 +75,7 @@ void print_usage(FILE* a_stream, int a_exit_code)
         fprintf(a_stream, "  -r, --root          root directory (default: './')\n");
         fprintf(a_stream, "  -s, --sendfile      enable sendfile\n");
 #ifdef ENABLE_PROFILER
+        fprintf(a_stream, "\n");
         fprintf(a_stream, "Debug Options:\n");
         fprintf(a_stream, "  -G, --gprofile       Google cpu profiler output file\n");
         fprintf(a_stream, "  -H, --hprofile       Google heap profiler output file\n");
@@ -121,7 +122,6 @@ int main(int argc, char** argv)
                 { "gprofile",     1, 0, 'G' },
                 { "hprofile",     1, 0, 'H' },
 #endif
-
                 // list sentinel
                 { 0, 0, 0, 0 }
         };
@@ -223,8 +223,6 @@ int main(int argc, char** argv)
                         l_gprof_file = optarg;
                         break;
                 }
-#endif
-#ifdef ENABLE_PROFILER
                 // -----------------------------------------
                 // google heap profiler output file
                 // -----------------------------------------
@@ -286,8 +284,6 @@ int main(int argc, char** argv)
         {
                 ProfilerStart(l_gprof_file.c_str());
         }
-#endif
-#ifdef ENABLE_PROFILER
         if (!l_hprof_file.empty())
         {
                 HeapProfilerStart(l_hprof_file.c_str());

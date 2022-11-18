@@ -249,6 +249,7 @@ public:
         socklen_t m_remote_sa_len;
         int m_sendfile_fd;
         size_t m_sendfile_size;
+        off_t m_sendfile_offset;
 private:
         // -------------------------------------------------
         // private methods

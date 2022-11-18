@@ -205,6 +205,15 @@ SSL_CTX* tls_init_ctx(const std::string &a_cipher_list,
         }
         if (a_options)
         {
+                // OpenSSL 3.x only
+                a_options |= SSL_OP_ENABLE_KTLS;
+                SSL_CTX_set_options(l_ctx, a_options);
+        }
+        else
+        {
+                long l_options = SSL_CTX_get_options(l_ctx);
+                // OpenSSL 3.x only
+                a_options |= SSL_OP_ENABLE_KTLS;
                 SSL_CTX_set_options(l_ctx, a_options);
         }
         if (!a_tls_crt_file.empty())
@@ -256,6 +265,9 @@ SSL_CTX* tls_init_ctx(const std::string &a_cipher_list,
         // ???
         SSL_CTX_set_mode(l_ctx, SSL_MODE_AUTO_RETRY);
         SSL_CTX_set_mode(l_ctx, SSL_MODE_RELEASE_BUFFERS);
+        // -------------------------------------------------
+        // done
+        // -------------------------------------------------
         return l_ctx;
 }
 //! ----------------------------------------------------------------------------
@@ -337,6 +349,11 @@ int32_t nconn_tls::init(void)
                         NCONN_ERROR(CONN_STATUS_ERROR_CONNECT_TLS, "LABEL[%s]: tls_ctx == NULL\n", m_label.c_str());
                         return NC_STATUS_ERROR;
                 }
+                uint64_t l_opt;
+                l_opt = SSL_get_options(m_ssl);
+                l_opt |= SSL_OP_ENABLE_KTLS;
+                uint64_t l_opt_result;
+                l_opt_result = SSL_set_options(m_ssl, l_opt);
         }
         // -------------------------------------------------
         // init ja3
@@ -1021,6 +1038,88 @@ int32_t nconn_tls::ncwrite(char *a_buf, uint32_t a_buf_len)
 //! ----------------------------------------------------------------------------
 int32_t nconn_tls::ncsendfile(void)
 {
+        if (m_sendfile_fd < 0)
+        {
+                return 0;
+        }
+        int l_s;
+        errno = 0;
+        l_s = ::SSL_sendfile(m_ssl, m_sendfile_fd, m_sendfile_offset, m_sendfile_size, 0);
+        TRC_ALL("HOST[%s] tls[%p] FD[%d] OFFSET: %lu SIZE: %lu WRITE: %d bytes. Reason: %s\n",
+                m_label.c_str(),
+                m_ssl,
+                m_sendfile_fd,
+                m_sendfile_offset,
+                m_sendfile_size,
+                l_s,
+                strerror(errno));
+        // -------------------------------------------------
+        // write >= 0 bytes successfully
+        // -------------------------------------------------
+        if (l_s >= 0)
+        {
+                m_sendfile_offset += l_s;
+                if (l_s == 0)
+                {
+                        m_sendfile_fd = -1;
+                }
+                return l_s;
+        }
+        // -------------------------------------------------
+        // get error message
+        // -------------------------------------------------
+        int l_te = ::SSL_get_error(m_ssl, l_s);
+        // -------------------------------------------------
+        // SSL_ERROR_WANT_READ
+        // -------------------------------------------------
+        if (l_te == SSL_ERROR_WANT_READ)
+        {
+                return NC_STATUS_AGAIN;
+        }
+        // -------------------------------------------------
+        // SSL_ERROR_WANT_WRITE
+        // -------------------------------------------------
+        else if (l_te == SSL_ERROR_WANT_WRITE)
+        {
+                // Add to writeable
+                if (m_evr_loop)
+                {
+                        l_s = m_evr_loop->mod_fd(m_fd,
+                                        EVR_FILE_ATTR_MASK_WRITE|
+                                        EVR_FILE_ATTR_MASK_STATUS_ERROR |
+                                        EVR_FILE_ATTR_MASK_RD_HUP |
+                                        EVR_FILE_ATTR_MASK_HUP |
+                                        EVR_FILE_ATTR_MASK_ET,
+                                        &m_evr_fd);
+                        if (l_s != STATUS_OK)
+                        {
+                                NCONN_ERROR(CONN_STATUS_ERROR_INTERNAL,
+                                            "LABEL[%s]: Error: Couldn't add socket file descriptor\n",
+                                            m_label.c_str());
+                                return NC_STATUS_ERROR;
+                        }
+                }
+                return NC_STATUS_AGAIN;
+        }
+        else
+        {
+                char *l_buf = gts_last_tls_error;
+                l_buf = ERR_error_string(l_te, l_buf);
+                if (l_buf)
+                {
+                        NCONN_ERROR(CONN_STATUS_ERROR_CONNECT_TLS, "LABEL[%s]: TLS_ERROR[%d]: %s.\n", m_label.c_str(), l_te, l_buf);
+                }
+                else
+                {
+                        NCONN_ERROR(CONN_STATUS_ERROR_CONNECT_TLS, "LABEL[%s]: TLS_ERROR[%d]: OTHER.\n",m_label.c_str(), l_te);
+                }
+        }
+        // -------------------------------------------------
+        // unknown error
+        // -------------------------------------------------
+        NCONN_ERROR(CONN_STATUS_ERROR_SEND,
+                    "LABEL[%s]: Error: performing SSL_sendfile.\n",
+                    m_label.c_str());
         return NC_STATUS_ERROR;
 }
 //! ----------------------------------------------------------------------------
