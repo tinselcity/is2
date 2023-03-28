@@ -157,6 +157,8 @@ ns_is2::h_resp_t fingerprint_h::do_get(ns_is2::session &a_session,
         // -------------------------------------------------
         std::string l_client_ip;
         get_client_ip(a_session, l_client_ip);
+        l_writer.Key("date");
+        l_writer.String(ns_is2::get_date_str());
         l_writer.Key("client_ip");
         l_writer.String(l_client_ip.c_str());
         // -------------------------------------------------
@@ -182,6 +184,8 @@ ns_is2::h_resp_t fingerprint_h::do_get(ns_is2::session &a_session,
         // -------------------------------------------------
         // write out keys
         // -------------------------------------------------
+        l_writer.Key("ssl_ext_list");
+        l_writer.String(l_ja3->get_ssl_ext_list_str().c_str());
         l_writer.Key("ja3_fingerprint");
         l_writer.String(l_ja3->get_str().c_str());
         l_writer.Key("ja3_md5");
@@ -198,7 +202,8 @@ obj_done:
         l_api_resp.add_std_headers(ns_is2::HTTP_STATUS_OK,
                                    "application/json",
                                    l_strbuf.GetSize(),
-                                   a_rqst.m_supports_keep_alives,
+                                   false,
+                                   //a_rqst.m_supports_keep_alives,
                                    a_session.get_server_name());
         l_api_resp.set_body_data(l_strbuf.GetString(), l_strbuf.GetSize());
         ns_is2::queue_api_resp(a_session, l_api_resp);

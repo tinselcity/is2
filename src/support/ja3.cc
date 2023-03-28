@@ -42,6 +42,7 @@
 #ifndef STATUS_ERROR
 #define STATUS_ERROR -1
 #endif
+#define TLS_CLIENT_HELLO_EXT_SORT 1
 //! ----------------------------------------------------------------------------
 //! macros
 //! ----------------------------------------------------------------------------
@@ -375,6 +376,12 @@ int32_t ja3::extract_bytes(const char* a_buf, uint16_t a_len)
                 ++l_ext_idx;
         }
         // -------------------------------------------------
+        // optionally sort tls extension list
+        // -------------------------------------------------
+#ifdef TLS_CLIENT_HELLO_EXT_SORT
+        m_fp_ssl_ext_list.sort();
+#endif
+        // -------------------------------------------------
         // done
         // -------------------------------------------------
         return STATUS_OK;
@@ -491,6 +498,43 @@ const std::string& ja3::get_str(void)
         // done
         // -------------------------------------------------
         return m_str;
+}
+//! ----------------------------------------------------------------------------
+//! \details: TODO
+//! \return:  TODO
+//! \param:   TODO
+//! ----------------------------------------------------------------------------
+const std::string& ja3::get_ssl_ext_list_str(void)
+{
+        if (!m_ssl_ext_list_str.empty())
+        {
+            return m_ssl_ext_list_str;
+        }
+        // -------------------------------------------------
+        // if unset just return empty str
+        // -------------------------------------------------
+        if (!m_fp_ssl_version)
+        {
+            return m_str;
+        }
+        // -------------------------------------------------
+        // helper to print a list
+        // -------------------------------------------------
+#define _PRINT_SSL_EXT_LIST(_list) do { \
+        for (auto & i_c : _list) { \
+                if (IS_GREASE_VAL(i_c)) { continue; } \
+                m_ssl_ext_list_str += _to_string(i_c); \
+                if (&i_c != &_list.back()) { \
+                        m_ssl_ext_list_str += "-"; \
+                } } } while(0)
+        // -------------------------------------------------
+        // SSLExtension
+        // -------------------------------------------------
+        _PRINT_SSL_EXT_LIST(m_fp_ssl_ext_list);
+        // -------------------------------------------------
+        // done
+        // -------------------------------------------------
+        return m_ssl_ext_list_str;
 }
 //! ----------------------------------------------------------------------------
 //! \details: TODO

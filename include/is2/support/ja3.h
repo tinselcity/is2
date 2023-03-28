@@ -38,7 +38,10 @@ public:
                 m_fp_cipher_list(0),
                 m_fp_ssl_ext_list(0),
                 m_fp_ec_curve_list(0),
-                m_fp_ec_pt_format_list(0)
+                m_fp_ec_pt_format_list(0),
+                m_str(),
+                m_ssl_ext_list_str(),
+                m_md5()
         {}
         ~ja3() {}
         void reset(void)
@@ -49,11 +52,13 @@ public:
                 m_fp_ec_curve_list.clear();
                 m_fp_ec_pt_format_list.clear();
                 m_str.clear();
+                m_ssl_ext_list_str.clear();
                 m_md5.clear();
         }
         int32_t extract_fp(SSL* a_ssl);
         int32_t extract_bytes(const char* a_buf, uint16_t a_len);
         const std::string& get_str(void);
+        const std::string& get_ssl_ext_list_str(void);
         const std::string& get_md5(void);
         // -------------------------------------------------
         // public members
@@ -79,6 +84,7 @@ private:
         // private members
         // -------------------------------------------------
         std::string m_str;
+        std::string m_ssl_ext_list_str;
         std::string m_md5;
 };
 } //namespace ns_is2 {

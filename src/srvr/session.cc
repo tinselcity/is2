@@ -485,7 +485,17 @@ state_top:
                 l_s = l_nconn->ncaccept();
                 if (l_s == nconn::NC_STATUS_ERROR)
                 {
-                        TRC_ERROR("performing ncaccept\n");
+                        TRC_ERROR("performing ncaccept l_cs: %p\n", l_cs);
+                        if (l_cs)
+                        {
+                                int32_t l_s;
+                                l_s = l_cs->teardown();
+                                // TODO check status
+                                UNUSED(l_s);
+                                delete l_cs;
+                                l_cs = NULL;
+                                return STATUS_DONE;
+                        }
                         return STATUS_ERROR;
                 }
                 // -----------------------------------------
