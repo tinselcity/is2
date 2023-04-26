@@ -70,7 +70,6 @@ SET(SRCS
   support/time_util.cc
   support/trace.cc
   support/uri.cc
-  support/date_util.cc
   support/os.cc
   # --------------------------------------------------------
   # evr
@@ -141,7 +140,6 @@ SET(HDRS
   ${CMAKE_SOURCE_DIR}/include/is2/status.h
   ${CMAKE_SOURCE_DIR}/include/is2/support/data.h
   ${CMAKE_SOURCE_DIR}/include/is2/support/time_util.h
-  ${CMAKE_SOURCE_DIR}/include/is2/support/date_util.h
   ${CMAKE_SOURCE_DIR}/include/is2/support/trace.h
   ${CMAKE_SOURCE_DIR}/include/is2/nconn/conn_status.h
   ${CMAKE_SOURCE_DIR}/include/is2/nconn/host_info.h
