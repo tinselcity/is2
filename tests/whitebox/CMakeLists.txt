@@ -33,9 +33,7 @@ add_library(is2_compiled_catch STATIC ${CMAKE_SOURCE_DIR}/ext/catch/catch.hpp _c
 # tls support
 # ------------------------------------------------------------------------------
 if(BUILD_TLS)
-  set(LIBRARIES ${DEBUG_LIBRARIES} ${CMAKE_BINARY_DIR}/src/libis2.a crypto ssl ${LIBRARIES})
-else()
-  set(LIBRARIES ${DEBUG_LIBRARIES} ${CMAKE_BINARY_DIR}/src/libis2.a ${LIBRARIES})
+  set(LIBRARIES crypto ssl ${LIBRARIES})
 endif()
 # ------------------------------------------------------------------------------
 # build tests
